@@ -1,16 +1,20 @@
 import logging
+import time
 from typing import Sequence
 import concurrent.futures
 import atexit
 
+# Move dotenv loading to the top, before other imports
+from dotenv import load_dotenv
+load_dotenv()  # Move this line here, before config import
+
 import clickhouse_connect
 from clickhouse_connect.driver.binding import quote_identifier, format_query_value
-from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 from mcp_clickhouse.mcp_env import config
 
-MCP_SERVER_NAME = "mcp-clickhouse"
+MCP_SERVER_NAME = "mcp-clickhouse-tz"
 
 # Configure logging
 logging.basicConfig(
@@ -20,9 +24,7 @@ logger = logging.getLogger(MCP_SERVER_NAME)
 
 QUERY_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=10)
 atexit.register(lambda: QUERY_EXECUTOR.shutdown(wait=True))
-SELECT_QUERY_TIMEOUT_SECS = 30
-
-load_dotenv()
+SELECT_QUERY_TIMEOUT_SECS = 30000
 
 deps = [
     "clickhouse-connect",
@@ -31,7 +33,12 @@ deps = [
     "pip-system-certs",
 ]
 
-mcp = FastMCP(MCP_SERVER_NAME, dependencies=deps)
+mcp = FastMCP(
+    name=MCP_SERVER_NAME,
+    host="127.0.0.1",
+    port=8081,
+    timeout=30000,
+    dependencies=deps)
 
 
 @mcp.tool()
@@ -179,3 +186,12 @@ def create_clickhouse_client():
     except Exception as e:
         logger.error(f"Failed to connect to ClickHouse: {str(e)}")
         raise
+
+
+if __name__ == '__main__':
+    try:
+        logger.info("Starting MCP server 'mcp-clickhouse-tz' on 127.0.0.1:8081")
+        mcp.run()
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        time.sleep(3)
