@@ -30,7 +30,9 @@ deps = [
     "clickhouse-connect",
     "python-dotenv",
     "uvicorn",
+    "pandas",
     "pip-system-certs",
+    "matplotlib",
 ]
 
 mcp = FastMCP(
